@@ -14,17 +14,39 @@ function _defineProperties(target, props) { for (var i = 0; i < props.length; i+
 
 function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); return Constructor; }
 
+function _slicedToArray(arr, i) { return _arrayWithHoles(arr) || _iterableToArrayLimit(arr, i) || _nonIterableRest(); }
+
+function _nonIterableRest() { throw new TypeError("Invalid attempt to destructure non-iterable instance"); }
+
+function _iterableToArrayLimit(arr, i) { var _arr = []; var _n = true; var _d = false; var _e = undefined; try { for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) { _arr.push(_s.value); if (i && _arr.length === i) break; } } catch (err) { _d = true; _e = err; } finally { try { if (!_n && _i["return"] != null) _i["return"](); } finally { if (_d) throw _e; } } return _arr; }
+
+function _arrayWithHoles(arr) { if (Array.isArray(arr)) return arr; }
+
 (function (g) {
-  var SVGElement =
+  var U = {
+    keyBy: function keyBy(a, f) {
+      return a.reduce(function (prev, el) {
+        var _f = f(el),
+            _f2 = _slicedToArray(_f, 2),
+            p = _f2[0],
+            v = _f2[1];
+
+        prev[p] = v;
+        return prev;
+      }, {});
+    }
+  };
+
+  var ElementBuilder =
   /*#__PURE__*/
   function () {
-    function SVGElement(el) {
-      _classCallCheck(this, SVGElement);
+    function ElementBuilder(el) {
+      _classCallCheck(this, ElementBuilder);
 
       this._el = el;
     }
 
-    _createClass(SVGElement, [{
+    _createClass(ElementBuilder, [{
       key: "attr",
       value: function attr(name, value) {
         this._el.setAttribute(name, value);
@@ -35,6 +57,13 @@ function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _d
       key: "style",
       value: function style(name, value) {
         this._el.style[name] = value;
+        return this;
+      }
+    }, {
+      key: "addClass",
+      value: function addClass(c) {
+        this._el.classList.add(c);
+
         return this;
       }
     }, {
@@ -50,7 +79,7 @@ function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _d
       }
     }]);
 
-    return SVGElement;
+    return ElementBuilder;
   }();
 
   var xCoef = 1,
@@ -62,8 +91,13 @@ function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _d
         chartData = options.chartData;
     var colors = chartData.colors,
         columns = chartData.columns,
-        names = chartData.names,
         types = chartData.types;
+    var chartColumnsIds = Object.keys(types).filter(function (t) {
+      return types[t] !== 'x';
+    });
+    var xColumnId = Object.keys(types).find(function (t) {
+      return types[t] === 'x';
+    });
     var columnsMap = {};
     var _iteratorNormalCompletion = true;
     var _didIteratorError = false;
@@ -89,41 +123,68 @@ function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _d
       }
     }
 
-    var createSVG = function createSVG(type) {
-      return new SVGElement(document.createElementNS('http://www.w3.org/2000/svg', type));
+    var state = {
+      disabled: U.keyBy(chartColumnsIds, function (id) {
+        return [id, false];
+      }),
+      visibleRange: {
+        from: 0,
+        to: 100
+      },
+      aspectRatio: 2 / 1,
+      elements: {
+        linesElements: {}
+      }
     };
 
-    var getStats = function getStats() {
-      var lines = Object.keys(types).filter(function (t) {
-        return types[t] !== 'x';
-      }).map(function (t) {
-        return columnsMap[t];
-      });
-      var xColumn = columnsMap[Object.keys(types).find(function (t) {
-        return types[t] === 'x';
-      })];
-      var yMax = Math.max.apply(Math, _toConsumableArray(lines.map(function (l) {
-        return Math.max.apply(Math, _toConsumableArray(l.slice(1)));
-      })));
-      var yMin = Math.min.apply(Math, _toConsumableArray(lines.map(function (l) {
-        return Math.min.apply(Math, _toConsumableArray(l.slice(1)));
-      })));
-      var xMin = 0;
-      var xMax = (xColumn.length - 1) * xStep;
-      return {
-        xMin: xMin,
-        xMax: xMax,
-        yMin: yMin,
-        yMax: yMax
+    var createSVG = function createSVG(type) {
+      return new ElementBuilder(document.createElementNS('http://www.w3.org/2000/svg', type));
+    };
+
+    var createEl = function createEl(type) {
+      return new ElementBuilder(document.createElement(type));
+    };
+
+    var getBounds = function getBounds(s) {
+      s = s || {
+        disabled: {},
+        visibleRange: {
+          from: 0,
+          to: 100
+        }
       };
+      var visibleLines = chartColumnsIds.filter(function (lid) {
+        return !s.disabled[lid];
+      }).map(function (lid) {
+        return columnsMap[lid];
+      });
+      var xColumn = columnsMap[xColumnId]; // TODO line contains only one point, take into sibling points
+
+      var visibleIndexRange = {
+        from: 1 + (xColumn.length - 1) * s.visibleRange.from / 100,
+        to: (xColumn.length - 1) * s.visibleRange.to / 100
+      };
+      var yMax = Math.max.apply(Math, _toConsumableArray(visibleLines.map(function (l) {
+        return Math.max.apply(Math, _toConsumableArray(l.slice(visibleIndexRange.from, visibleIndexRange.to + 1)));
+      })));
+      var yMin = Math.min.apply(Math, _toConsumableArray(visibleLines.map(function (l) {
+        return Math.min.apply(Math, _toConsumableArray(l.slice(visibleIndexRange.from, visibleIndexRange.to + 1)));
+      })));
+      var xSize = (xColumn.length - 1) * xStep;
+      var xMin = xSize * s.visibleRange.from / 100;
+      var xMax = xSize * s.visibleRange.to / 100;
+      return [xMin, xMax, yMin, yMax];
     };
 
     var init = function init() {
-      var _getStats = getStats(),
-          xMin = _getStats.xMin,
-          xMax = _getStats.xMax,
-          yMin = _getStats.yMin,
-          yMax = _getStats.yMax;
+      var fullBounds = getBounds(null);
+      state.fullBounds = fullBounds;
+
+      var _fullBounds = _slicedToArray(fullBounds, 4),
+          xMin = _fullBounds[0],
+          xMax = _fullBounds[1],
+          yMin = _fullBounds[2],
+          yMax = _fullBounds[3];
 
       var width = xMax - xMin,
           height = yMax - yMin;
@@ -131,29 +192,31 @@ function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _d
       var yScale = 1 / (height / width) / aspectRatio;
       var viewBoxPadding = 50;
       var viewBox = [xMin * xCoef - viewBoxPadding, yMin * yScale - viewBoxPadding, xMax * xCoef + viewBoxPadding, yMax * yScale + viewBoxPadding];
-      var svgEl = createSVG('svg').style('width', '100%').style('height', '100%').attr('viewBox', "".concat(viewBox[0], " ").concat(viewBox[1], " ").concat(viewBox[2], " ").concat(viewBox[3])) //.style('vector-effect', 'non-scaling-stroke')
-      .attr('zoom', 1); // todo set width, height, viewbox etc
-      // TODO chekc view port when xmin really more  0
+      var svgEl = createSVG('svg').style('width', '100%').style('height', '100%').attr('viewBox', "".concat(viewBox[0], " ").concat(viewBox[1], " ").concat(viewBox[2], " ").concat(viewBox[3])).attr('zoom', 1); // TODO chekc view port when xmin really more  0
       // TODO use clip?
       // TODO need to scle coordinates to minimive viewposrt of svg?
 
-      var initalTransform = "matrix(1, 0, 0, ".concat(yScale, ", 0, 0)");
+      var initalTransform = "matrix(1, 0, 0, ".concat(yScale, ", 0, 0)"); //const initalTransform = `matrix(1, 0, 0, 1, 0, 0)`;
+
       var lc = 5;
-      var lineGEl = createSVG('g').style('stroke-width', '1px').style('vector-effect', 'non-scaling-stroke').style('stroke', 'gray').style('fill', 'none').style('vector-effect', 'non-scaling-stroke').attr('transform', initalTransform).appendTo(svgEl);
+      var hGridLines = createSVG('g').addClass('animate-transform').style('vector-effect', 'non-scaling-stroke').style('stroke', 'gray').style('fill', 'none').style('vector-effect', 'non-scaling-stroke').attr('transform', initalTransform).appendTo(svgEl);
 
       for (var i = 0; i <= lc; i++) {
         var y = yMin + (yMax - yMin) / lc * i;
-        createSVG('path').attr('d', 'M0 ' + y + ' L' + xMax + ' ' + y).appendTo(lineGEl);
+        createSVG('path').style('stroke-width', '1px').style('vector-effect', 'non-scaling-stroke').attr('d', 'M0 ' + y + ' L' + xMax + ' ' + y).appendTo(hGridLines);
       }
 
-      var columnNames = Object.keys(types); // ==>> TODO !!!! invert coordinates !!!!
+      state.elements.hGridLines = hGridLines;
+      var columnIds = Object.keys(types); // ==>> TODO !!!! invert coordinates !!!!
 
       var lineElements = {};
+      var linesGC = createSVG('g').addClass('animate-transform') //.attr('transform', initalTransform)
+      .appendTo(svgEl);
+      var linesG = createSVG('g').attr('transform', initalTransform).appendTo(linesGC);
 
-      for (var columnIndex = 0; columnIndex < columnNames.length; columnIndex++) {
-        var columnName = columnNames[columnIndex],
+      for (var columnIndex = 0; columnIndex < columnIds.length; columnIndex++) {
+        var columnName = columnIds[columnIndex],
             t = types[columnName],
-            n = names[columnName],
             color = colors[columnName],
             c = columnsMap[columnName];
 
@@ -167,41 +230,63 @@ function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _d
             d += c[pIdx] * yCoef;
           }
 
-          var p = createSVG('path').attr('d', d).style('stroke', color).style('stroke-width', '2px') // vector-effect: non-scaling-stroke
-          .style('vector-effect', 'non-scaling-stroke').attr('transform', initalTransform).style('fill', 'none').appendTo(svgEl);
+          var p = createSVG('path').attr('d', d).style('stroke', color).style('stroke-width', '2px').style('vector-effect', 'non-scaling-stroke').style('fill', 'none').appendTo(linesG);
           lineElements[columnName] = p.el;
         } else if (t === 'x') {// todo create x axis
         }
       }
 
+      state.elements.linesElements = lineElements;
+      state.elements.linesGC = linesGC;
+      state.elements.linesG = linesG;
       svgEl.appendTo(el); //const sliderEl = document.createElement('div');
       //sliderEl.classList.add('chart-slider');
 
-      var sliderEl = document.createElement('input');
-      sliderEl.setAttribute('type', 'range');
-      sliderEl.setAttribute('min', '0');
-      sliderEl.setAttribute('max', '100');
-      sliderEl.setAttribute('step', '0.1');
-      sliderEl.setAttribute('value', '100');
-      sliderEl.style['width'] = '100%';
+      var sliderEl = createEl('input').attr('type', 'range').attr('min', '0').attr('max', '100').attr('step', '0.1').attr('value', '100').style('width', '100%').el;
 
       var onSliderChange = function onSliderChange(e) {
-        var val = Math.max(e.target.value, 3);
-        console.log('range-val', val, performance.now());
-        var t = "matrix(".concat(100 / val, ",0,0,").concat(yScale, ",0,0)");
+        var val = Math.max(e.target.value, 3); // 0 <= val <= 100
 
-        var _arr = Object.values(lineElements);
-
-        for (var _i = 0; _i < _arr.length; _i++) {
-          var l = _arr[_i];
-          l.setAttribute('transform', t);
-        }
+        setRange({
+          from: 0,
+          to: val
+        });
       };
 
       sliderEl.onchange = onSliderChange;
       sliderEl.oninput = onSliderChange;
       el.appendChild(sliderEl);
-      /* <input id="vol-control" type="range" min="0" max="100" step="1" oninput="SetVolume(this.value)" onchange="SetVolume(this.value)"></input>  */
+    };
+
+    var setRange = function setRange(range) {
+      range = range || {
+        from: 0,
+        to: 100
+      };
+      state.visibleRange = range;
+      var W = state.fullBounds[1] - state.fullBounds[0];
+
+      var _getBounds = getBounds(state),
+          _getBounds2 = _slicedToArray(_getBounds, 4),
+          xMin = _getBounds2[0],
+          xMax = _getBounds2[1],
+          yMin = _getBounds2[2],
+          yMax = _getBounds2[3];
+
+      var w = xMax - xMin,
+          h = yMax - yMin;
+      var aspectRatio = 2 / 1;
+      var xScale = W / w;
+      var yScale = 1 / (h / W) / aspectRatio;
+      var dx = -xMin,
+          dy = -yMin;
+      var verticalTransform = "matrix(1,0,0,1,0,".concat(dy, ") matrix(1,0,0,").concat(yScale, ",0,0)");
+      var horizontalTransform = "matrix(1,0,0,1,".concat(dx, ",0) matrix(").concat(xScale, ",0,0,1,0,0)");
+      state.elements.linesGC.attr('transform', verticalTransform);
+      state.elements.linesG.attr('transform', horizontalTransform);
+      state.elements.hGridLines.attr('transform', verticalTransform); // for(let l of Object.values(state.elements.linesElements)) {
+      //     l.setAttribute('transform', t);
+      // }
     };
 
     init();
@@ -304,6 +389,7 @@ window.globalChartsData = [{
 }];
 "use strict";
 
+/* eslint-disable */
 console.log('Start ....');
 
 function start() {
