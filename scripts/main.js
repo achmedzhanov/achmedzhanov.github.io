@@ -1,5 +1,15 @@
 "use strict";
 
+function _objectSpread(target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i] != null ? arguments[i] : {}; var ownKeys = Object.keys(source); if (typeof Object.getOwnPropertySymbols === 'function') { ownKeys = ownKeys.concat(Object.getOwnPropertySymbols(source).filter(function (sym) { return Object.getOwnPropertyDescriptor(source, sym).enumerable; })); } ownKeys.forEach(function (key) { _defineProperty(target, key, source[key]); }); } return target; }
+
+function _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+function _defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
+
+function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); return Constructor; }
+
 function _toConsumableArray(arr) { return _arrayWithoutHoles(arr) || _iterableToArray(arr) || _nonIterableSpread(); }
 
 function _nonIterableSpread() { throw new TypeError("Invalid attempt to spread non-iterable instance"); }
@@ -7,12 +17,6 @@ function _nonIterableSpread() { throw new TypeError("Invalid attempt to spread n
 function _iterableToArray(iter) { if (Symbol.iterator in Object(iter) || Object.prototype.toString.call(iter) === "[object Arguments]") return Array.from(iter); }
 
 function _arrayWithoutHoles(arr) { if (Array.isArray(arr)) { for (var i = 0, arr2 = new Array(arr.length); i < arr.length; i++) { arr2[i] = arr[i]; } return arr2; } }
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-function _defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
-
-function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); return Constructor; }
 
 function _slicedToArray(arr, i) { return _arrayWithHoles(arr) || _iterableToArrayLimit(arr, i) || _nonIterableRest(); }
 
@@ -53,6 +57,10 @@ function _arrayWithHoles(arr) { if (Array.isArray(arr)) return arr; }
     return pmul([0, y], m)[1];
   };
 
+  var maxSlice = function maxSlice(a, from, to) {
+    return Math.max.apply(Math, _toConsumableArray(a.slice(from, to + 1)));
+  };
+
   var a2m = function a2m(m) {
     return 'matrix(' + m[0] + ',' + m[1] + ',' + m[2] + ',' + m[3] + ',' + m[4] + ',' + m[5] + ')';
   };
@@ -82,6 +90,13 @@ function _arrayWithHoles(arr) { if (Array.isArray(arr)) return arr; }
       key: "attr",
       value: function attr(name, value) {
         this._el.setAttribute(name, value);
+
+        return this;
+      }
+    }, {
+      key: "on",
+      value: function on(name, h) {
+        this._el.addEventListener(name, h, false);
 
         return this;
       }
@@ -151,8 +166,7 @@ function _arrayWithHoles(arr) { if (Array.isArray(arr)) return arr; }
       width: 500,
       height: 250
     };
-    var colors = chartData.colors,
-        columns = chartData.columns,
+    var columns = chartData.columns,
         names = chartData.names,
         types = chartData.types;
     var chartColumnsIds = Object.keys(types).filter(function (t) {
@@ -202,7 +216,7 @@ function _arrayWithHoles(arr) { if (Array.isArray(arr)) return arr; }
       transformY: function transformY(y) {
         return y;
       }
-    };
+    }; // TODO remove duplicated method!
 
     var getBounds = function getBounds(s) {
       // const ty = !!s;
@@ -223,17 +237,11 @@ function _arrayWithHoles(arr) { if (Array.isArray(arr)) return arr; }
         to: (xColumn.length - 1) * s.visibleRange.to / 100
       };
       var yMax = Math.max.apply(Math, _toConsumableArray(visibleLines.map(function (l) {
-        return Math.max.apply(Math, _toConsumableArray(l.slice(visibleIndexRange.from, visibleIndexRange.to + 1)));
-      }))); //let yMin = Math.min(...visibleLines.map(l => Math.min(...l.slice(visibleIndexRange.from, visibleIndexRange.to + 1))));
-
+        return maxSlice(l, visibleIndexRange.from, visibleIndexRange.to + 1);
+      })));
       var xSize = (xColumn.length - 2) * xStep;
       var xMin = xSize * s.visibleRange.from / 100;
-      var xMax = xSize * s.visibleRange.to / 100; // if(ty) {
-      //     const yMaxOld = yMax;
-      //     yMax = translateY(yMin);
-      //     yMin = translateY(yMaxOld);
-      // }
-
+      var xMax = xSize * s.visibleRange.to / 100;
       return [xMin, xMax, 0
       /*yMin*/
       , yMax];
@@ -251,7 +259,6 @@ function _arrayWithHoles(arr) { if (Array.isArray(arr)) return arr; }
       var xAxisHeight = 20;
       var svgWidth = sizes.width;
       var svgHeight = sizes.height + xAxisHeight;
-      var viewBox = [0, 0, svgWidth, svgHeight];
 
       state.transformY = function (y) {
         return -(y - yMin) + yMax;
@@ -261,65 +268,94 @@ function _arrayWithHoles(arr) { if (Array.isArray(arr)) return arr; }
       //TODO use same matrices for chart view port and axes!
 
 
-      var svgEl = createSVG('svg').style('width', svgWidth).style('height', svgHeight).attr('viewBox', "".concat(viewBox[0], " ").concat(viewBox[1], " ").concat(viewBox[2], " ").concat(viewBox[3])).attr('zoom', 1);
-      var bounds = fullBounds;
-      var vm = vMatrix(bounds);
-      var hm = hMatrix(bounds); // Y axis
+      var setSvgSizes = function setSvgSizes(svgElBuilder, w, h, p) {
+        var vb = [-p.left, -p.top, w + p.right, h + p.bottom];
+        svgElBuilder.style('width', w + (p.left + p.right)).style('height', h + (p.left + p.bottom)).attr('viewBox', "".concat(vb[0], " ").concat(vb[1], " ").concat(vb[2], " ").concat(vb[3]));
+        return svgElBuilder;
+      };
+
+      var svgEl = createSVG('svg').attr('zoom', 1);
+      setSvgSizes(svgEl, svgWidth, svgHeight, {
+        left: 0,
+        right: 0,
+        top: 2,
+        bottom: 2
+      }); // Y axis
 
       var yAxisG = createSVG('g').addClass('animate-transform').style('vector-effect', 'non-scaling-stroke').appendTo(svgEl);
-      state.elements.hGridLinesG = yAxisG;
-      var yAxis = new YAxis({
-        containerEl: yAxisG.el
-      });
-      yAxis.updateRange(fullBounds, state, vm);
-      state.yAxis = yAxis; //X axis
+      state.elements.hGridLinesG = yAxisG; //X axis
 
       var xAxisG = createSVG('g').addClass('animate-transform').appendTo(svgEl).attr('transform', 'translate(0, ' + (state.sizes.height + xAxisHeight * 0.8) + ')');
       state.elements.xAxisG = xAxisG;
+      var cvp = new ChartViewPort({
+        containerEl: svgEl.el,
+        chartData: chartData,
+        sizes: state.sizes
+      });
+      cvp.init();
+      state.cvp = cvp;
       var xAxis = new XAxis({
         containerEl: xAxisG.el,
         xColumn: xColumn
       });
-      xAxis.updateRange(fullBounds, state, hm);
       state.xAxis = xAxis;
-      var columnIds = Object.keys(types);
-      var lineElements = {};
-      var linesGC = createSVG('g').addClass('animate-transform').attr('transform', a2m(vm)).appendTo(svgEl);
-      var linesG = createSVG('g').attr('transform', a2m(hm)).appendTo(linesGC);
+      var yAxis = new YAxis({
+        containerEl: yAxisG.el
+      });
+      state.yAxis = yAxis;
 
-      for (var columnIndex = 0; columnIndex < columnIds.length; columnIndex++) {
-        var lId = columnIds[columnIndex],
-            t = types[lId],
-            color = colors[lId],
-            c = columnsMap[lId];
+      cvp.onChangeTransformations = function (_ref) {
+        var bounds = _ref.bounds,
+            vm = _ref.vm,
+            hm = _ref.hm;
+        xAxis.updateRange(bounds, state, hm);
+        yAxis.updateRange(bounds, state, vm);
+      };
 
-        if (t === 'line') {
-          var d = '';
-
-          for (var pIdx = 1; pIdx < c.length; pIdx++) {
-            d += pIdx == 1 ? 'M' : 'L';
-            d += (pIdx - 1) * xStep;
-            d += ' ';
-            d += state.transformY(c[pIdx]);
-          }
-
-          var p = createSVG('path').attr('d', d).style('stroke', color).style('stroke-width', '2px').style('vector-effect', 'non-scaling-stroke').style('fill', 'none').addClass('animate-opacity').appendTo(linesG);
-          lineElements[lId] = p;
-        }
-      }
-
-      state.elements.linesElements = lineElements;
-      state.elements.linesGC = linesGC;
-      state.elements.linesG = linesG;
-      svgEl.appendTo(el); //const sliderEl = document.createElement('div');
-      //sliderEl.classList.add('chart-slider');
+      cvp.updateRange({
+        from: 0,
+        to: 100
+      }, true);
+      svgEl.appendTo(el);
+      var miniMapHeight = 30;
+      var miniMapBlockEl = createEl('div').addClass('chart-range-selector').appendTo(el);
+      var miniMapEl = createSVG('svg').appendTo(miniMapBlockEl);
+      setSvgSizes(miniMapEl, state.sizes.width, miniMapHeight, {
+        left: 0,
+        right: 0,
+        top: 2,
+        bottom: 2
+      });
+      var miniCVP = new ChartViewPort({
+        containerEl: miniMapEl.el,
+        chartData: chartData,
+        sizes: {
+          width: state.sizes.width,
+          height: miniMapHeight
+        },
+        strokeWidth: '1px'
+      });
+      miniCVP.init();
+      state.miniCVP = miniCVP;
+      miniCVP.updateRange({
+        from: 0,
+        to: 100
+      }, true);
+      var rangeSelector = new RangeSelector({
+        range: {
+          from: 50,
+          to: 75
+        },
+        containerEl: miniMapBlockEl.el
+      });
+      rangeSelector.init(); // create svg, create lines
 
       var sliderEl = createEl('input').attr('type', 'range').attr('min', '0').attr('max', '100').attr('step', '0.1').attr('value', '100').style('width', '100%').el;
 
       var onSliderChange = function onSliderChange(e) {
         var val = Math.max(e.target.value, 3); // 0 <= val <= 100
 
-        setRange({
+        cvp.updateRange({
           from: 0,
           to: val
         });
@@ -339,65 +375,216 @@ function _arrayWithHoles(arr) { if (Array.isArray(arr)) return arr; }
       };
     };
 
-    var vMatrix = function vMatrix(bounds) {
-      var fbyMax = state.fullBounds[3];
-      var yMax = bounds[3];
-      var yScale = state.sizes.height / yMax;
-      var m1 = [1, 0, 0, 1, 0, yMax * yScale],
-          m2 = [1, 0, 0, yScale, 0, 0],
-          m3 = [1, 0, 0, 1, 0, -fbyMax];
-      var vt = mmul(m1, mmul(m2, m3));
-      return vt;
-    };
-
-    var hMatrix = function hMatrix(bounds) {
-      var _bounds = _slicedToArray(bounds, 2),
-          xMin = _bounds[0],
-          xMax = _bounds[1];
-
-      var xScale = state.sizes.width / xMax;
-      var dx = -xMin
-      /*, dy = 0 /*-yMin*/
-      ;
-      var m = mmul([1, 0, 0, 1, dx, 0], [xScale, 0, 0, 1, 0, 0]);
-      return m;
-    };
-
     var toggleLine = function toggleLine(lId) {
-      state.disabled[lId] = !state.disabled[lId];
-      var lEl = state.elements.linesElements[lId];
-
-      if (state.disabled[lId]) {
-        lEl.addClass('disbled-line');
-      } else {
-        lEl.removeClass('disbled-line');
-      }
-
-      setRange(state.visibleRange, true);
+      state.cvp.toggleLine(lId);
+      state.miniCVP.toggleLine(lId);
     }; // const beautyfyBounds = (bounds) => {
     //     // find nearest netural number divided to six OR 10, 50, 100
     //     return bounds;
     // }
 
 
-    var setRange = function setRange(range, force) {
-      range = range || {
+    init();
+  }
+
+  var ChartViewPort =
+  /*#__PURE__*/
+  function () {
+    function ChartViewPort(options) {
+      _classCallCheck(this, ChartViewPort);
+
+      this.el = new ElementBuilder(options.containerEl);
+      this.chartData = options.chartData;
+      this.sizes = options.sizes;
+      this.strokeWidth = options.strokeWidth || 2;
+      this.disabled = {};
+      this.visibleRange = {
         from: 0,
         to: 100
       };
-      if (state.visibleRange.from == range.from && state.visibleRange.to == range.to && !force) return;
-      state.visibleRange = range;
-      var newBounds = getBounds(state);
-      var vm = vMatrix(newBounds);
-      var hm = hMatrix(newBounds);
-      state.elements.linesGC.attr('transform', a2m(vm));
-      state.elements.linesG.attr('transform', a2m(hm));
-      state.yAxis.updateRange(newBounds, state, vm);
-      state.xAxis.updateRange(newBounds, state, hm);
-    };
+      if (!this.sizes) throw new 'Expected options.sizes'();
 
-    init();
-  }
+      this.onChangeTransformations = function () {};
+    }
+
+    _createClass(ChartViewPort, [{
+      key: "init",
+      value: function init() {
+        var _this$chartData = this.chartData,
+            colors = _this$chartData.colors,
+            columns = _this$chartData.columns,
+            types = _this$chartData.types;
+        var columnsMap = this.columnsMap = {};
+        var _iteratorNormalCompletion2 = true;
+        var _didIteratorError2 = false;
+        var _iteratorError2 = undefined;
+
+        try {
+          for (var _iterator2 = columns[Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
+            var _c = _step2.value;
+            columnsMap[_c[0]] = _c;
+          }
+        } catch (err) {
+          _didIteratorError2 = true;
+          _iteratorError2 = err;
+        } finally {
+          try {
+            if (!_iteratorNormalCompletion2 && _iterator2.return != null) {
+              _iterator2.return();
+            }
+          } finally {
+            if (_didIteratorError2) {
+              throw _iteratorError2;
+            }
+          }
+        }
+
+        this.chartColumnsIds = Object.keys(types).filter(function (t) {
+          return types[t] !== 'x';
+        });
+        var columnIds = Object.keys(types);
+        this.xColumnId = Object.keys(types).find(function (t) {
+          return types[t] === 'x';
+        });
+        this.xColumn = columnsMap[this.xColumnId];
+        this.fullBounds = this.getBounds({
+          from: 0,
+          to: 100
+        });
+        var lineElements = {};
+        var linesGC = createSVG('g').addClass('animate-transform') //.attr('transform', a2m(vm))
+        .appendTo(this.el);
+        var linesG = createSVG('g') //.attr('transform', a2m(hm))
+        .appendTo(linesGC);
+
+        var _this$fullBounds = _slicedToArray(this.fullBounds, 4),
+            yMin = _this$fullBounds[2],
+            yMax = _this$fullBounds[3];
+
+        var transformY = function transformY(y) {
+          return -(y - yMin) + yMax;
+        }
+        /* -yMin  */
+        ;
+
+        for (var columnIndex = 0; columnIndex < columnIds.length; columnIndex++) {
+          var lId = columnIds[columnIndex],
+              t = types[lId],
+              color = colors[lId],
+              c = columnsMap[lId];
+
+          if (t === 'line') {
+            var d = '';
+
+            for (var pIdx = 1; pIdx < c.length; pIdx++) {
+              d += pIdx == 1 ? 'M' : 'L';
+              d += (pIdx - 1) * xStep;
+              d += ' ';
+              d += transformY(c[pIdx]);
+            }
+
+            var p = createSVG('path').attr('d', d).style('stroke', color).style('stroke-width', this.strokeWidth).style('vector-effect', 'non-scaling-stroke').style('fill', 'none').addClass('animate-opacity').appendTo(linesG);
+            lineElements[lId] = p;
+          }
+        }
+
+        this.linesElements = lineElements;
+        this.linesGC = linesGC;
+        this.linesG = linesG;
+      }
+    }, {
+      key: "vMatrix",
+      value: function vMatrix(bounds) {
+        var fbyMax = this.fullBounds[3];
+        var yMax = bounds[3];
+        var yScale = this.sizes.height / yMax;
+        var m1 = [1, 0, 0, 1, 0, yMax * yScale],
+            m2 = [1, 0, 0, yScale, 0, 0],
+            m3 = [1, 0, 0, 1, 0, -fbyMax];
+        var vt = mmul(m1, mmul(m2, m3));
+        return vt;
+      }
+    }, {
+      key: "hMatrix",
+      value: function hMatrix(bounds) {
+        var _bounds = _slicedToArray(bounds, 2),
+            xMin = _bounds[0],
+            xMax = _bounds[1];
+
+        var xScale = this.sizes.width / xMax;
+        var dx = -xMin
+        /*, dy = 0 /*-yMin*/
+        ;
+        var m = mmul([1, 0, 0, 1, dx, 0], [xScale, 0, 0, 1, 0, 0]);
+        return m;
+      }
+    }, {
+      key: "getBounds",
+      value: function getBounds(range) {
+        var _this = this;
+
+        range = range || {
+          from: 0,
+          to: 100
+        };
+        var visibleLines = this.chartColumnsIds.filter(function (lid) {
+          return !_this.disabled[lid];
+        }).map(function (lid) {
+          return _this.columnsMap[lid];
+        });
+        var visibleIndexRange = {
+          from: 1 + (this.xColumn.length - 1) * this.visibleRange.from / 100,
+          to: (this.xColumn.length - 1) * this.visibleRange.to / 100
+        };
+        var yMax = Math.max.apply(Math, _toConsumableArray(visibleLines.map(function (l) {
+          return maxSlice(l, visibleIndexRange.from, visibleIndexRange.to + 1);
+        }))); //let yMin = Math.min(...visibleLines.map(l => Math.min(...l.slice(visibleIndexRange.from, visibleIndexRange.to + 1))));
+
+        var xSize = (this.xColumn.length - 2) * xStep;
+        var xMin = xSize * range.from / 100;
+        var xMax = xSize * range.to / 100;
+        return [xMin, xMax, 0
+        /*yMin*/
+        , yMax];
+      }
+    }, {
+      key: "updateRange",
+      value: function updateRange(range, force) {
+        range = range || {
+          from: 0,
+          to: 100
+        };
+        if (this.visibleRange.from == range.from && this.visibleRange.to == range.to && !force) return;
+        this.visibleRange = range;
+        var newBounds = this.getBounds(range);
+        var vm = this.vMatrix(newBounds);
+        var hm = this.hMatrix(newBounds);
+        this.linesGC.attr('transform', a2m(vm));
+        this.linesG.attr('transform', a2m(hm));
+        this.onChangeTransformations({
+          bounds: newBounds,
+          vm: vm,
+          hm: hm
+        });
+      }
+    }, {
+      key: "toggleLine",
+      value: function toggleLine(lId) {
+        this.disabled[lId] = !this.disabled[lId];
+        var lEl = this.linesElements[lId];
+
+        if (this.disabled[lId]) {
+          lEl.addClass('disbled-line');
+        } else {
+          lEl.removeClass('disbled-line');
+        }
+
+        this.updateRange(this.visibleRange, true);
+      }
+    }]);
+
+    return ChartViewPort;
+  }();
 
   var XAxis =
   /*#__PURE__*/
@@ -416,7 +603,7 @@ function _arrayWithHoles(arr) { if (Array.isArray(arr)) return arr; }
     _createClass(XAxis, [{
       key: "init",
       value: function init(hm) {
-        var _this = this;
+        var _this2 = this;
 
         var xPoints = this.xColumn.slice(1);
         this.textElements = new Array(xPoints.length);
@@ -428,15 +615,15 @@ function _arrayWithHoles(arr) { if (Array.isArray(arr)) return arr; }
         };
 
         this.getOrCreateTextEl = function (i) {
-          if (_this.textElements[i]) return _this.textElements[i];
+          if (_this2.textElements[i]) return _this2.textElements[i];
           var labelText = new Date(xPoints[i]).toLocaleDateString(userLang, dateLabel);
           var x = i * xStep;
-          var tEl = createSVG('text').attr('x', '0').attr('y', '0').attr('transform', a2m([1, 0, 0, 1, pmulX(x, hm), 0])).textContent('' + labelText).addClass('chart-x-line-text').addClass('animate-opacity').appendTo(_this.el);
+          var tEl = createSVG('text').attr('x', '0').attr('y', '0').attr('transform', a2m([1, 0, 0, 1, pmulX(x, hm), 0])).textContent('' + labelText).addClass('chart-x-line-text').addClass('animate-opacity').appendTo(_this2.el);
           var v = {
             el: tEl,
             x: x
           };
-          _this.textElements[i] = v;
+          _this2.textElements[i] = v;
           return v;
         };
       }
@@ -509,7 +696,7 @@ function _arrayWithHoles(arr) { if (Array.isArray(arr)) return arr; }
     _createClass(YAxis, [{
       key: "updateRange",
       value: function updateRange(bounds, state, vm) {
-        var _this2 = this;
+        var _this3 = this;
 
         this.sizes = state.sizes;
         this.transformY = state.transformY;
@@ -535,7 +722,7 @@ function _arrayWithHoles(arr) { if (Array.isArray(arr)) return arr; }
             var _newLines = this.calcYAxis(prevBounds, lc, vm);
 
             q(function () {
-              _this2.updateYGridLines(_gridElements, _newLines, function (el) {
+              _this3.updateYGridLines(_gridElements, _newLines, function (el) {
                 return el.style('opacity', '0');
               }); //this.updateYGridLines(gridElements, newLines, () => {});
 
@@ -552,7 +739,7 @@ function _arrayWithHoles(arr) { if (Array.isArray(arr)) return arr; }
             var movedLines = this.calcYAxis(bounds, lc, vm);
             this.elementsCache[rKey] = _gridElements2;
             q(function () {
-              _this2.updateYGridLines(_gridElements2, movedLines, function (el) {
+              _this3.updateYGridLines(_gridElements2, movedLines, function (el) {
                 return el.style('opacity', '1');
               });
             }, 0);
@@ -638,6 +825,197 @@ function _arrayWithHoles(arr) { if (Array.isArray(arr)) return arr; }
     return YAxis;
   }();
 
+  function dnd(e, ondnd, data) {
+    var startEvent = e;
+
+    var fireDndEvent = function fireDndEvent(mme, last) {
+      var delta = {
+        x: mme.clientX - startEvent.clientX,
+        y: mme.clientY - startEvent.clientY
+      };
+      var dndEvent = {
+        mme: mme,
+        delta: delta,
+        data: data,
+        finished: last
+      };
+      ondnd(dndEvent);
+    };
+
+    var onMouseMove = function onMouseMove(mme) {
+      if (finished) return;
+      fireDndEvent(mme, false);
+    };
+
+    var onMouseUp = function onMouseUp(mme) {
+      if (finished) return;
+      fireDndEvent(mme, true);
+      finish();
+    };
+
+    var finished = false;
+
+    var finish = function finish() {
+      finished = true;
+      document.removeEventListener('pointermove', onMouseMove);
+      document.removeEventListener('pointerup', onMouseUp);
+    };
+
+    document.addEventListener('pointermove', onMouseMove);
+    document.addEventListener('pointerup', onMouseUp);
+  }
+
+  function limit(v, min, max) {
+    if (v > max) return max;
+    if (v < min) return min;
+    return v;
+  }
+
+  var RangeSelector =
+  /*#__PURE__*/
+  function () {
+    function RangeSelector(options) {
+      _classCallCheck(this, RangeSelector);
+
+      this.range = options.range || {
+        from: 0,
+        to: 100
+      };
+      this.width = options.width;
+      this.minRamgeWidth = options.minRamgeWidth || 5;
+      this.el = new ElementBuilder(options.containerEl);
+
+      this.onRangeChanged = function () {};
+    }
+
+    _createClass(RangeSelector, [{
+      key: "init",
+      value: function init() {
+        var _this4 = this;
+
+        this.leftCurtainEl = createEl('div').addClass('left-curtain').appendTo(this.el);
+        this.rightCurtainEl = createEl('div').addClass('right-curtain').appendTo(this.el);
+        this.leftGripperEl = createEl('div').addClass('left-gripper').appendTo(this.el);
+        this.rightGripperEl = createEl('div').addClass('right-gripper').appendTo(this.el);
+        this.sliderEl = createEl('div').addClass('slider').appendTo(this.el); // use pointer events???
+
+        this.sliderEl.on('pointerdown', function (e) {
+          return _this4.onSliderMouseDown(e);
+        });
+        this.leftGripperEl.on('pointerdown', function (e) {
+          return _this4.onLeftGripperMouseDown(e);
+        });
+        this.rightGripperEl.on('pointerdown', function (e) {
+          return _this4.onRightGripperMouseDown(e);
+        });
+        this.positionByRange();
+      }
+    }, {
+      key: "positionByRange",
+      value: function positionByRange() {
+        var w = this.el.el.getBoundingClientRect().width;
+        var leftPos = Math.round(w * this.range.from / 100);
+        var rightPos = Math.round(w * this.range.to / 100);
+        this.state = {
+          leftPos: leftPos,
+          rightPos: rightPos,
+          w: w
+        };
+        this.updateElementsByState();
+      }
+    }, {
+      key: "updateElementsByState",
+      value: function updateElementsByState() {
+        var leftPos = this.state.leftPos;
+        var rightPos = this.state.rightPos;
+        var w = this.state.w;
+        var width = rightPos - leftPos;
+        this.sliderEl.style('left', leftPos + 'px');
+        this.sliderEl.style('width', width + 'px');
+        this.leftGripperEl.style('left', leftPos + 'px');
+        this.rightGripperEl.style('right', w - rightPos + 'px');
+        this.leftCurtainEl.style('width', leftPos + 'px');
+        this.rightCurtainEl.style('width', w - rightPos + 'px');
+      }
+    }, {
+      key: "getWidth",
+      value: function getWidth() {
+        return this.el.el.getBoundingClientRect().width;
+      }
+    }, {
+      key: "cloneState",
+      value: function cloneState() {
+        return {
+          leftPos: this.state.leftPos,
+          rightPos: this.state.rightPos,
+          w: this.state.w
+        };
+      }
+    }, {
+      key: "onSliderMouseDown",
+      value: function onSliderMouseDown(e) {
+        var _this5 = this;
+
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        var w = this.getWidth();
+        var startState = this.cloneState();
+        var minWidth = this.minRamgeWidth / 100 * w;
+        var sliderWidth = Math.max(startState.rightPos - startState.leftPos, minWidth);
+        dnd(e, function (dndEvent) {
+          var leftPos = limit(startState.leftPos + dndEvent.delta.x, 0, w - sliderWidth);
+          var rightPos = leftPos + sliderWidth;
+          _this5.state = _objectSpread({}, _this5.state, {
+            leftPos: leftPos,
+            rightPos: rightPos
+          });
+
+          _this5.updateElementsByState();
+        });
+      }
+    }, {
+      key: "onLeftGripperMouseDown",
+      value: function onLeftGripperMouseDown(e) {
+        var _this6 = this;
+
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        var w = this.getWidth();
+        var startState = this.cloneState();
+        var minWidth = this.minRamgeWidth / 100 * w;
+        dnd(e, function (dndEvent) {
+          var leftPos = limit(startState.leftPos + dndEvent.delta.x, 0, startState.rightPos - minWidth);
+          _this6.state = _objectSpread({}, _this6.state, {
+            leftPos: leftPos
+          });
+
+          _this6.updateElementsByState();
+        });
+      }
+    }, {
+      key: "onRightGripperMouseDown",
+      value: function onRightGripperMouseDown(e) {
+        var _this7 = this;
+
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        var w = this.getWidth();
+        var startState = this.cloneState();
+        var minWidth = this.minRamgeWidth / 100 * w;
+        dnd(e, function (dndEvent) {
+          var rightPos = limit(startState.rightPos + dndEvent.delta.x, startState.leftPos + minWidth, w);
+          _this7.state = _objectSpread({}, _this7.state, {
+            rightPos: rightPos
+          });
+
+          _this7.updateElementsByState();
+        });
+      }
+    }]);
+
+    return RangeSelector;
+  }();
+
   var ToggleGroup =
   /*#__PURE__*/
   function () {
@@ -656,7 +1034,7 @@ function _arrayWithHoles(arr) { if (Array.isArray(arr)) return arr; }
     _createClass(ToggleGroup, [{
       key: "init",
       value: function init() {
-        var _this3 = this;
+        var _this8 = this;
 
         this.el.addClass('chart-toogle-buttons');
 
@@ -665,8 +1043,8 @@ function _arrayWithHoles(arr) { if (Array.isArray(arr)) return arr; }
         var _loop = function _loop() {
           var k = _arr2[_i2];
           var toggled = true;
-          var n = _this3.names[k];
-          var bEl = createEl('button').addClass('button').addClass('toggled').innerText(n).appendTo(_this3.el);
+          var n = _this8.names[k];
+          var bEl = createEl('button').addClass('button').addClass('toggled').innerText(n).appendTo(_this8.el);
 
           bEl.el.onclick = function () {
             toggled = !toggled;
@@ -677,7 +1055,7 @@ function _arrayWithHoles(arr) { if (Array.isArray(arr)) return arr; }
               bEl.removeClass('toggled');
             }
 
-            _this3.onToogle(k);
+            _this8.onToogle(k);
           };
         };
 
