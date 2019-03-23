@@ -1660,11 +1660,15 @@ onDocumentReady(function () {
     for (var i = 0; i < data.length; i++) {
       var el = document.getElementById('chart' + i);
       var w = el.offsetWidth || 500;
+      var isLandscape = window.innerHeight > window.innerWidth;
       window.createChart({
         el: el,
         chartData: data[i],
-        title: 'Chart #' + i //sizes: {width: w, height: w}
-
+        title: 'Chart #' + i,
+        sizes: {
+          width: w,
+          height: isLandscape ? w : w / 2
+        }
       });
     }
 
