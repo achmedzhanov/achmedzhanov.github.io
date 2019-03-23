@@ -234,6 +234,8 @@ function _arrayWithHoles(arr) { if (Array.isArray(arr)) return arr; }
     return ElementBuilder;
   }();
 
+  var optimizedSVGTransformations = false;
+
   var createSVG = function createSVG(type) {
     return new ElementBuilder(document.createElementNS('http://www.w3.org/2000/svg', type));
   };
@@ -251,10 +253,6 @@ function _arrayWithHoles(arr) { if (Array.isArray(arr)) return arr; }
         chartData = options.chartData,
         title = options.title;
     var sizes = options.sizes;
-    sizes = sizes || {
-      width: 500,
-      height: 250
-    };
     var columns = chartData.columns,
         names = chartData.names,
         types = chartData.types,
@@ -299,7 +297,6 @@ function _arrayWithHoles(arr) { if (Array.isArray(arr)) return arr; }
         from: 0,
         to: 100
       },
-      aspectRatio: 2 / 1,
       elements: {
         linesElements: {}
       },
@@ -338,16 +335,38 @@ function _arrayWithHoles(arr) { if (Array.isArray(arr)) return arr; }
     };
 
     var init = function init() {
+      if (title) {
+        createEl('div').addClass('title').innerText(title).appendTo(el);
+      }
+
+      var svgElC = createEl('div').addClass('chart-view-port').style('position', 'relative').appendTo(el);
+      var viewPortPaddings = {
+        left: 0,
+        right: 0,
+        top: 2,
+        bottom: 2
+      };
+      var xAxisHeight = 20;
+
+      if (!sizes) {
+        sizes = {
+          width: svgElC.el.offsetWidth || 500,
+          height: svgElC.el.offsetHeight || 500
+        };
+      }
+
+      state.sizes = sizes;
+      state.viewPortSizes = {
+        width: sizes.width - viewPortPaddings.left - viewPortPaddings.right,
+        height: sizes.height - viewPortPaddings.top - viewPortPaddings.bottom - xAxisHeight
+      };
       var fullBounds = getBounds(null);
       state.fullBounds = fullBounds;
 
       var _fullBounds = _slicedToArray(fullBounds, 4),
           yMin = _fullBounds[2],
-          yMax = _fullBounds[3]; // TODO_use_name_viewPortSize
+          yMax = _fullBounds[3];
 
-
-      state.sizes = sizes;
-      var xAxisHeight = 20;
       var svgWidth = sizes.width;
       var svgHeight = sizes.height + xAxisHeight;
       var viewPortWidth = sizes.width;
@@ -365,19 +384,9 @@ function _arrayWithHoles(arr) { if (Array.isArray(arr)) return arr; }
         var vb = [-p.left, -p.top, w + p.right, h + p.bottom];
         svgElBuilder.style('width', w + (p.left + p.right)).style('height', h + (p.left + p.bottom)).attr('viewBox', "".concat(vb[0], " ").concat(vb[1], " ").concat(vb[2], " ").concat(vb[3]));
         return svgElBuilder;
-      };
+      }; //console.log('svgElC w h ', svgElC.el.offsetWidth, svgElC.el.offsetHeight);
 
-      if (title) {
-        createEl('div').addClass('title').innerText(title).appendTo(el);
-      }
 
-      var viewPortPaddings = {
-        left: 0,
-        right: 0,
-        top: 2,
-        bottom: 2
-      };
-      var svgElC = createEl('div').style('position', 'relative').appendTo(el);
       var viewPortBackdropEl = createEl('div').style('left', viewPortPaddings.left + 'px').style('top', viewPortPaddings.top + 'px').style('width', viewPortWidth + 'px').style('height', viewPortHeight + 'px').style('position', 'absolute').appendTo(svgElC);
       var svgEl = createSVG('svg').attr('zoom', 1);
       setSvgSizes(svgEl, svgWidth, svgHeight, viewPortPaddings); // Y axis
@@ -385,7 +394,7 @@ function _arrayWithHoles(arr) { if (Array.isArray(arr)) return arr; }
       var yAxisG = createSVG('g').addClass('animate-transform').style('vector-effect', 'non-scaling-stroke').appendTo(svgEl);
       state.elements.hGridLinesG = yAxisG; //X axis
 
-      var xAxisG = createSVG('g').addClass('animate-transform').appendTo(svgEl).attr('transform', 'translate(0, ' + (state.sizes.height + xAxisHeight * 0.8) + ')');
+      var xAxisG = createSVG('g').addClass('animate-transform').appendTo(svgEl).attr('transform', 'translate(0, ' + (state.viewPortSizes.height + xAxisHeight * 0.8) + ')');
       state.elements.xAxisG = xAxisG;
       var initialRange = {
         from: 50,
@@ -394,7 +403,7 @@ function _arrayWithHoles(arr) { if (Array.isArray(arr)) return arr; }
       var cvp = new ChartViewPort({
         containerEl: svgEl.el,
         chartData: chartData,
-        sizes: state.sizes,
+        sizes: state.viewPortSizes,
         range: initialRange
       });
       cvp.init();
@@ -406,7 +415,7 @@ function _arrayWithHoles(arr) { if (Array.isArray(arr)) return arr; }
         hoverContainerEl: cvp.hoverContainerG.el,
         viewPort: cvp,
         viewPortBackdropEl: viewPortBackdropEl.el,
-        sizes: state.sizes
+        sizes: state.viewPortSizes
       });
       cph.init();
       state.cph = cph;
@@ -416,7 +425,8 @@ function _arrayWithHoles(arr) { if (Array.isArray(arr)) return arr; }
       });
       state.xAxis = xAxis;
       var yAxis = new YAxis({
-        containerEl: yAxisG.el
+        containerGEl: yAxisG.el,
+        containerDivEl: viewPortBackdropEl.el
       });
       state.yAxis = yAxis;
 
@@ -431,9 +441,9 @@ function _arrayWithHoles(arr) { if (Array.isArray(arr)) return arr; }
       cvp.updateRange(initialRange, true);
       svgEl.appendTo(svgElC);
       var miniMapHeight = 30;
-      var miniMapBlockEl = createEl('div').addClass('chart-range-selector').style('width', state.sizes.width + 'px').appendTo(el);
+      var miniMapBlockEl = createEl('div').addClass('chart-range-selector').style('width', state.viewPortSizes.width + 'px').appendTo(el);
       var miniMapEl = createSVG('svg').appendTo(miniMapBlockEl);
-      setSvgSizes(miniMapEl, state.sizes.width, miniMapHeight, {
+      setSvgSizes(miniMapEl, state.viewPortSizes.width, miniMapHeight, {
         left: 0,
         right: 0,
         top: 2,
@@ -443,7 +453,7 @@ function _arrayWithHoles(arr) { if (Array.isArray(arr)) return arr; }
         containerEl: miniMapEl.el,
         chartData: chartData,
         sizes: {
-          width: state.sizes.width,
+          width: state.viewPortSizes.width,
           height: miniMapHeight
         },
         strokeWidth: '1px',
@@ -458,7 +468,7 @@ function _arrayWithHoles(arr) { if (Array.isArray(arr)) return arr; }
         from: 0,
         to: 100
       }, true);
-      var minRangeWidth = Math.max(2 / (xColumn.length - 1) * 100, 1 / state.sizes.width * 100, 5);
+      var minRangeWidth = Math.max(2 / (xColumn.length - 1) * 100, 1 / state.viewPortSizes.width * 100, 5);
       var rangeSelector = new RangeSelector({
         range: initialRange,
         containerEl: miniMapBlockEl.el,
@@ -523,8 +533,6 @@ function _arrayWithHoles(arr) { if (Array.isArray(arr)) return arr; }
 
       this.onChangeTransformations = function () {};
 
-      this.optimizedSVGTransformations = false;
-
       this.commitMarkupB = function () {
         return _this2.commitMarkup();
       };
@@ -581,7 +589,7 @@ function _arrayWithHoles(arr) { if (Array.isArray(arr)) return arr; }
         var linesElements = {};
         var linesGC = createSVG('g').appendTo(this.el);
 
-        if (this.optimizedSVGTransformations) {
+        if (optimizedSVGTransformations) {
           linesGC.addClass('animate-transform');
         }
 
@@ -610,7 +618,7 @@ function _arrayWithHoles(arr) { if (Array.isArray(arr)) return arr; }
           if (t === 'line') {
             var d = '';
 
-            if (this.optimizedSVGTransformations) {
+            if (optimizedSVGTransformations) {
               for (var pIdx = 1; pIdx < c.length; pIdx++) {
                 d += pIdx == 1 ? 'M' : 'L';
                 d += (pIdx - 1) * xStep;
@@ -747,7 +755,7 @@ function _arrayWithHoles(arr) { if (Array.isArray(arr)) return arr; }
         var vm = this.vMatrix(newBounds);
         var hm = this.hMatrix(newBounds);
 
-        if (this.optimizedSVGTransformations) {
+        if (optimizedSVGTransformations) {
           this.linesGC.attr('transform', a2m(vm));
           this.linesG.attr('transform', a2m(hm));
         } else {
@@ -891,7 +899,7 @@ function _arrayWithHoles(arr) { if (Array.isArray(arr)) return arr; }
           lEl.addClass('disabled-line');
         } else {
           lEl.removeClass('disabled-line');
-        } // if(this.optimizedSVGTransformations) {
+        } // if(optimizedSVGTransformations) {
 
 
         this.disabled[lId] = disabled;
@@ -980,6 +988,8 @@ function _arrayWithHoles(arr) { if (Array.isArray(arr)) return arr; }
     }, {
       key: "onViewPortClick",
       value: function onViewPortClick(e) {
+        if (!this.viewPort.currentTransformations) return;
+
         if (!this.isCreatedElements) {
           this.createElements();
           this.isCreatedElements = true;
@@ -1011,7 +1021,7 @@ function _arrayWithHoles(arr) { if (Array.isArray(arr)) return arr; }
           circleEl.attr('cx', _translatedPoint[0]);
           circleEl.attr('cy', _translatedPoint[1]);
           circleEl.attr('display', '');
-          this.tooltipValuesElMap[lId].innerText('' + yPoint);
+          this.tooltipValuesElMap[lId].innerText('' + y);
           this.tooltipValuesBlocksElMap[lId].style('display', 'inline-block');
         }
 
@@ -1054,7 +1064,7 @@ function _arrayWithHoles(arr) { if (Array.isArray(arr)) return arr; }
         var tooltipWidth = tooltipRect.width;
         var tooltipPosX = limit(baseX - 10, 0, this.sizes.width - tooltipWidth);
         this.tooltipEl.style('left', tooltipPosX + 'px');
-        this.tooltipEl.style('top', 20 + 'px');
+        this.tooltipEl.style('top', 0 + 'px');
         this.lineEl.attr('display', 'block');
         this.lineEl.attr('transform', 'translate(' + pmulX(xPoint, m) + ', 0)');
         document.addEventListener('mousemove', this.checkPinterActivityToClose);
@@ -1137,7 +1147,7 @@ function _arrayWithHoles(arr) { if (Array.isArray(arr)) return arr; }
         // eval visible labels
 
 
-        var maxLabelInViewPort = Math.trunc(state.sizes.width / this.getLabelWidth()); // todo some coef for padding
+        var maxLabelInViewPort = Math.trunc(state.viewPortSizes.width / this.getLabelWidth()); // todo some coef for padding
 
         var w = bounds[1] - bounds[0];
         var actualLabelInViewPort = w / xStep;
@@ -1176,7 +1186,8 @@ function _arrayWithHoles(arr) { if (Array.isArray(arr)) return arr; }
     function YAxis(options) {
       _classCallCheck(this, YAxis);
 
-      this.el = new ElementBuilder(options.containerEl);
+      var c = optimizedSVGTransformations ? options.containerGEl : options.containerDivEl;
+      this.el = new ElementBuilder(c);
       this.elementsCache = {};
       this.currentRangeKey = null;
       this.currentBounds = null;
@@ -1187,7 +1198,7 @@ function _arrayWithHoles(arr) { if (Array.isArray(arr)) return arr; }
       value: function updateRange(bounds, state, vm) {
         var _this10 = this;
 
-        this.sizes = state.sizes;
+        this.sizes = state.viewPortSizes;
         this.transformY = state.transformY;
 
         var _bounds2 = _slicedToArray(bounds, 4),
@@ -1280,12 +1291,25 @@ function _arrayWithHoles(arr) { if (Array.isArray(arr)) return arr; }
 
         for (var i = 0; i < lc; i++) {
           var y = lines[i].y;
-          var lEl = createSVG('path').style('vector-effect', 'non-scaling-stroke').attr('d', 'M0 0 L' + this.sizes.width + ' 0').attr('transform', 'matrix(1,0,0,1,0,' + y + ')').addClass('chart-y-line').addClass('animate-transform-opacity').appendTo(this.el);
-          hGridLines.push(lEl);
-          cb(lEl);
-          var tEl = createSVG('text').attr('x', '0').attr('y', '0').attr('transform', 'matrix(1,0,0,1,0,' + (y - 5) + ')').attr('font-family', 'sans-serif').attr('font-size', '10').attr('fill', 'gray').textContent('' + lines[i].text).addClass('chart-y-line-text').addClass('animate-transform-opacity').appendTo(this.el);
-          hGridTexts.push(tEl);
-          cb(tEl);
+
+          if (optimizedSVGTransformations) {
+            var lEl = createSVG('path').style('vector-effect', 'non-scaling-stroke').attr('d', 'M0 0 L' + this.sizes.width + ' 0').attr('transform', 'matrix(1,0,0,1,0,' + y + ')').addClass('chart-y-line').addClass('animate-transform-opacity').appendTo(this.el);
+            hGridLines.push(lEl);
+            cb(lEl);
+            var tEl = createSVG('text').attr('x', '0').attr('y', '0').attr('transform', 'matrix(1,0,0,1,0,' + (y - 5) + ')').attr('font-family', 'sans-serif').attr('font-size', '10').attr('fill', 'gray').textContent('' + lines[i].text).addClass('chart-y-line-text').addClass('animate-transform-opacity').appendTo(this.el);
+            hGridTexts.push(tEl);
+            cb(tEl);
+          } else {
+            var _lEl = createEl('div').style('top', y + 'px').addClass('chart-y-line').appendTo(this.el);
+
+            hGridLines.push(_lEl);
+            cb(_lEl);
+
+            var _tEl = createEl('div').style('top', y + 'px').innerText('' + lines[i].text).addClass('chart-y-line-text').appendTo(this.el);
+
+            hGridTexts.push(_tEl);
+            cb(_tEl);
+          }
         }
 
         return {
@@ -1302,11 +1326,19 @@ function _arrayWithHoles(arr) { if (Array.isArray(arr)) return arr; }
 
         for (var i = 0; i < lc; i++) {
           var y = lines[i].y;
-          hGridLines[i].attr('d', 'M0 0 L' + this.sizes.width + ' 0').attr('transform', 'matrix(1,0,0,1,0,' + y + ')');
-          cb(hGridLines[i]);
-          hGridTexts[i] //.textContent('' + lines[i].text)
-          .attr('transform', 'matrix(1,0,0,1,0,' + (y - 5) + ')');
-          cb(hGridTexts[i]);
+
+          if (optimizedSVGTransformations) {
+            hGridLines[i].attr('d', 'M0 0 L' + this.sizes.width + ' 0').attr('transform', 'matrix(1,0,0,1,0,' + y + ')');
+            cb(hGridLines[i]);
+            hGridTexts[i] //.textContent('' + lines[i].text)
+            .attr('transform', 'matrix(1,0,0,1,0,' + (y - 5) + ')');
+            cb(hGridTexts[i]);
+          } else {
+            hGridLines[i].style('top', y + 'px');
+            cb(hGridLines[i]);
+            hGridTexts[i].style('top', y + 'px');
+            cb(hGridTexts[i]);
+          }
         }
       }
     }]);
@@ -1586,7 +1618,27 @@ function _arrayWithHoles(arr) { if (Array.isArray(arr)) return arr; }
     return ToggleGroup;
   }();
 
+  var createModeSwitcher = function createModeSwitcher() {
+    var dayText = "Switch To Night Mode";
+    var nightText = "Switch To Day Mode";
+    var buttonEl = createEl('button').addClass('mode-switcher-button').innerText(dayText).appendTo(document.body);
+    var night = false;
+    var b = new ElementBuilder(document.body);
+    buttonEl.on('click', function () {
+      night = !night;
+
+      if (night) {
+        b.addClass('night');
+        buttonEl.innerText(nightText);
+      } else {
+        b.removeClass('night');
+        buttonEl.innerText(dayText);
+      }
+    });
+  };
+
   g.createChart = createChart;
+  g.createModeSwitcher = createModeSwitcher;
 })(window);
 "use strict";
 
@@ -1611,12 +1663,11 @@ onDocumentReady(function () {
       window.createChart({
         el: el,
         chartData: data[i],
-        title: 'Chart #' + i,
-        sizes: {
-          width: w,
-          height: w / 2
-        }
+        title: 'Chart #' + i //sizes: {width: w, height: w}
+
       });
     }
+
+    window.createModeSwitcher();
   });
 });
