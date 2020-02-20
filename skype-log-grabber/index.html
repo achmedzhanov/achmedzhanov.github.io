@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Skype история</title>
+    <meta charset="utf-8">
+    <style>
+        @font-face {
+            font-family: "Segoe UI Local";
+            font-weight: 200;
+            src: local("Segoe UI Light")
+        }
+
+        @font-face {
+            font-family: "Segoe UI Local";
+            font-weight: 400;
+            src: local("Segoe UI")
+        }
+
+        @font-face {
+            font-family: "Segoe UI Local";
+            font-weight: 600;
+            src: local("Segoe UI Semibold")
+        }
+
+        body,
+        html {
+            height: 100%
+        }
+
+        body {
+            background-color: #f2f2f2;
+            font: 1em "Segoe UI Local", "Segoe WP", "Segoe UI Web", Tahoma, "Helvetica Neue", Helvetica, "Meiryo UI", Meiryo, Arial Unicode MS, sans-serif;
+            width: 100%;
+            margin: 0 auto
+        }
+
+        body.conversation {
+            overflow-x: hidden
+        }
+
+        .left {
+            display: block;
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 30%;
+            height: 100%;
+            margin: 0;
+            overflow: hidden
+        }
+
+        .right {
+            display: block;
+            position: absolute;
+            right: 0;
+            top: 0;
+            width: 70%;
+            height: 100%;
+            overflow: hidden
+        }
+
+        div#selected-conversation-placeholder {
+            display: block;
+            width: 100%;
+            top: 120px;
+            bottom: 0;
+            position: absolute;
+            overflow: auto
+        }
+
+        .object {
+            width: 100%;
+            height: 98%;
+            overflow-x: hidden;
+            overflow-x: hidden
+        }
+
+        body.index {
+            overflow: hidden
+        }
+
+        div.header {
+            position: fixed;
+            top: 0;
+            left: 1rem;
+            width: 100%;
+            background-color: #f2f2f2;
+            margin-bottom: 1rem;
+            padding-bottom: 1rem
+        }
+
+        h1 {
+            color: #0b0b10;
+            font-size: 1.5em;
+            top: 0;
+            left: 1rem;
+            padding-left: 1rem;
+            padding-top: 1rem;
+            padding-bottom: 1rem;
+            margin-top: 0;
+            margin-bottom: 1rem;
+            width: 100%;
+            background-color: #f2f2f2
+        }
+
+        h1.conversations {
+            position: static;
+            margin-bottom: 0;
+            padding-left: 7rem;
+            background: url(skype.svg) 1rem 1rem no-repeat;
+            margin-bottom: 0
+        }
+
+        div.author {
+            color: #626f82;
+            padding-bottom: .5rem
+        }
+
+        div.quote:before {
+            display: block;
+            height: 0;
+            content: "“";
+            margin-left: -1.5rem;
+            font: italic 50px/1 Georgia, serif;
+            color: #999
+        }
+
+        div.quote {
+            font-style: italic;
+            margin-left: 1.5rem;
+            margin-bottom: .5rem
+        }
+
+        span.author {
+            color: #626f82
+        }
+
+        span.timestamp {
+            color: #626f82;
+            padding-left: .5rem;
+            font-size: small
+        }
+
+        span.timestamp-conv {
+            color: #626f82;
+            padding-left: .5rem;
+            font-size: small
+        }
+
+        span.messageCount {
+            color: #626f82;
+            font-size: small
+        }
+
+        span.at:before {
+            content: "@"
+        }
+
+        span.at {
+            font-style: italic;
+            color: #626f82
+        }
+
+        ul {
+            list-style-type: none;
+            padding-left: 1rem;
+            padding-right: 1rem;
+            padding-top: 1rem;
+            margin-top: 2rem;
+            margin-bottom: 2rem;
+            padding-bottom: 2rem
+        }
+
+        ul.conversations {
+            position: absolute;
+            top: 8rem;
+            bottom: 0;
+            width: 90%;
+            overflow-y: scroll
+        }
+
+        li.message {
+            border-radius: 5px;
+            background-color: #fff;
+            color: #0b0b10;
+            padding-left: 1rem;
+            padding-top: .5rem;
+            padding-bottom: .5rem;
+            margin: .5rem auto
+        }
+
+        li.selected-message {
+            background-color: #0079ca4d;
+        }
+
+        li.message > div > input[type="checkbox"]:focus {
+            box-shadow: 0 0 0pt 2pt green;
+        }
+
+        li.conversations {
+            background-color: #f2f2f2;
+            color: #0b0b10;
+            padding-left: .25rem;
+            padding-top: .5rem;
+            padding-bottom: .5rem;
+            margin: 0 auto;
+            word-wrap: break-word;
+            border-bottom-style: solid;
+            border-bottom-width: thin;
+            border-bottom-color: #626f82
+        }
+
+        li.conversations-sel {
+            background-color: #c7edfc;
+            color: #0b0b10;
+            padding-left: .25rem;
+            padding-top: .5rem;
+            padding-bottom: .5rem;
+            margin: 0 auto;
+            word-wrap: break-word;
+            border-bottom-style: solid;
+            border-bottom-width: thin;
+            border-bottom-color: #626f82
+        }
+
+        .form {
+            position: absolute;
+            display: block;
+            top: 100px;
+            left: 50px;
+            right: 50px;
+            text-align: left
+        }
+
+        .form fieldset {
+            border-radius: 5px;
+            border-color: #626f82;
+            background-color: #c7edfc
+        }
+
+        .primaryCta:hover,
+        .promo a:hover .promo-link {
+            color: #fff;
+            background-color: #0b64a4
+        }
+
+        .btn {
+            box-sizing: border-box;
+            border: 1px solid transparent;
+            border-radius: 100px;
+            cursor: pointer;
+            display: inline-block;
+            font-size: 16px;
+            font-weight: 600;
+            line-height: 24px;
+            position: relative;
+            text-align: center;
+            text-decoration: none !important;
+            word-wrap: break-word;
+            padding: 12px 30px
+        }
+
+        .primaryCta {
+            color: #fff;
+            background-color: #0078ca
+        }
+
+        #progress {
+            display: none
+        }
+
+        pre {
+            display: inline
+        }
+
+        ul.details {
+            list-style-type: circle;
+            padding-left: 1rem;
+            padding-right: 1rem;
+            padding-top: 0;
+            margin-top: 0;
+            margin-bottom: 10px;
+            padding-bottom: 10px
+        }
+
+        #selected-conversation-header {
+            margin-top: 50px
+        }
+
+        .step-1,
+        .step-2 {
+            display: none
+        }
+
+        .selection-conv-summary {
+            padding-left: 1rem;
+            display: none;
+        }
+
+        .conv-item-summary {
+            font-size: small;
+        }
+
+        .conv-item-any-selected-count {
+            background-color: #0079ca4d;
+            padding: 0px 2px 2px 2px;
+            border-radius: 5px;
+            line-height: 1rem;            
+        }
+
+        #select-all-messages, #reset-all-messages {
+            padding-left: 1rem;
+        }
+
+        .save-button-container {
+            position: absolute;
+            right: 1rem; 
+            top: 1rem; 
+        }
+    </style>
+</head>
+
+<body>
+    <div class="left step-2">
+        <div class="header">
+            <h1 class="conversations">История</h1>
+            <table class="step-2">
+                <tbody>
+                    <tr>
+                        <th>Аккаунт</th>
+                        <td id="hdr-user"></td>
+                    </tr>
+                    <tr>
+                        <th>Экспотировано</th>
+                        <td id="hdr-exported"></td>
+                    </tr>
+                    <tr>
+                        <th>Беседы</th>
+                        <td><div>Выбрано <span id="sel-hdr-stats"></span> из <span id="hdr-stats"></span></div></td>
+                        <td></td>
+                    </tr>
+                    <tr>
+                        <th>Сообщения</th>
+                        <td ><div>Выбрано <span id="sel-hdr-stats-messages"></span> из <span id="hdr-stats-messages"></span></div></td>
+                        <td ></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <ul class="conversations step-2" id="conversations"></ul>
+    </div>
+    <div id="selected-conversation step-2" class="right">
+        <h1 class="conversation step-2"> <span id="selected-conversation-header"></span> 
+        </h1>
+        <div class="step-2 save-button-container">
+            <input type="button" id="btnSave" value="Сохранить Все" class="btn primaryCta">
+        </div>
+        <div class="selection-conv-summary">
+            Выбрано <span id="sel-current-conv-messages">0</span> 
+            из <span id="current-conv-messages">0</span>
+            <a href="#" id="select-all-messages" >Выбрать все</a>
+            <a href="#" id="reset-all-messages" >Сбросить</a>
+        </div>
+        <div id="selected-conversation-placeholder" class="step-2">
+            <ul class="messages" id="messages"></ul>
+        </div>
+    </div>
+    <div class="step-1 form">
+        <form id="jsonFile" name="jsonFile" enctype="multipart/form-data" method="post">
+            <fieldset>
+                <h3>Экспорт Skype истории</h3>
+                <ol>
+                    <li>Запросить историю <a href="https://go.skype.com/export" target="_blank">export of your Skype
+                            conversations</a></li>
+                    <li>Когда история будет готова , <a href="https://go.skype.com/export" target="_blank">скачать архив</a></li>
+                    <li>Паспаковать TAR файл<ul class="details">
+                            <li>В Windows моджно воспользоваться <a href="https://www.7-zip.org/"
+                                    target="_blank">7-zip</a> или аналогом</li>
+                            <li>В Mac, по двойному клику модно распаковать ...</li>
+                        </ul>
+                    </li>
+                    <li><strong>Выберите&nbsp;</strong>
+                        <pre>messages.json</pre><strong>&nbsp;файл из архива:&nbsp;</strong><input type="file"
+                            accept=".json" id="fileinput"></li>
+                    <li><strong>Начать загрузку&nbsp;</strong><input type="button" id="btnLoad" value="Загрузить"
+                            class="btn primaryCta"></li>
+                </ol><br>
+                <div id="progress">Загрузка...</div>
+            </fieldset>
+        </form>
+    </div>
+    <script src="main.js" type="text/javascript">
+    </script>
+</body>
+
+</html>
